@@ -28,6 +28,7 @@ class HelperBot(commands.Bot):
         self.tree.error(self._on_app_command_error)
 
     async def setup_hook(self) -> None:
+        from .cogs.mention_guard import MentionGuard
         from .cogs.moderation import Moderation
         from .cogs.suggestions import Suggestions
         from .cogs.tickets import Tickets
@@ -36,6 +37,7 @@ class HelperBot(commands.Bot):
         await self.add_cog(tickets)
         await self.add_cog(Suggestions(self))
         await self.add_cog(Moderation(self, tickets))
+        await self.add_cog(MentionGuard(self))
 
         if self.config.guild_id:
             guild = discord.Object(id=self.config.guild_id)

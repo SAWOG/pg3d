@@ -6,6 +6,7 @@ Yapay zeka kullanmaz, API anahtarı ya da ücretli servis gerektirmez. Sadece Di
 |---|---|
 | **Günlük öneri özeti** | Her gün `DAILY_SUMMARY_TIME` saatinde öneri kanalındaki son 24 saatin mesajlarını toplar, Türkçeye çevirir, birbirine benzeyen önerileri tek maddede birleştirir, 👍/👎 tepkilerine göre sıralar ve rapor kanalına atar (her maddede mesaja link var). `/oneri-ozet saat:48` ile istediğin an çalıştırabilirsin. |
 | **Ticket özeti** | Yeni ticket açılınca `TICKET_AUTO_SUMMARY_DELAY` saniye bekler, sonra rapor kanalına atar: kim açtı, talebi (kullanıcının ilk mesajları, Türkçeye çevrilmiş), son mesajı, ekler, hangi yetkililer ilgilendi, durum (yanıtlanmadı / yetkili yanıtı bekleniyor / kullanıcı yanıtı bekleniyor). `/ticket-ozet` ile istediğin an da özetler. Ticket Tool vb. botlarla uyumlu: kategori ID'si ya da kanal adı önekiyle (`ticket-`) tanır. |
+| **Etiket uyarısı** | `MENTION_GUARD_CHANNEL_IDS` kanallarında biri `@sawog` yazarsa (gerçek etiket ya da düz metin) bot o mesaja `MENTION_GUARD_MESSAGE` ile yanıt verir. Yetkililer muaf, aynı kişi `MENTION_GUARD_COOLDOWN` saniyede bir uyarılır. |
 | **Kural uyarısı** | Her mesajı anında kontrol eder: yasaklı kelimeler (`banned_words.txt`), davet linki, izinsiz link, toplu etiket, spam (kısa sürede çok mesaj), aynı mesajı tekrar etme, tamamen büyük harf. İhlalde kullanıcıyı uyarır, mesajı siler, uyarıyı kaydeder, `WARN_TIMEOUT_THRESHOLD` uyarıda timeout atar ve log kanalına yazar. Düzenlenen mesajlar da kontrol edilir. Yetkililer, muaf roller ve ticket kanalları taranmaz. |
 
 Komutların hepsi sadece **Mesajları Yönet** yetkisi olanlara görünür (ve sunucu tarafında tekrar kontrol edilir), yanıtlar sadece komutu kullanana görünür.
@@ -16,6 +17,21 @@ Komutların hepsi sadece **Mesajları Yönet** yetkisi olanlara görünür (ve s
 | `/ticket-ozet [kanal]` | Ticket'ı özetler |
 | `/uyarilar uye` | Üyenin aktif uyarıları |
 | `/uyari-sil uye` | Üyenin uyarılarını sıfırlar |
+
+## İndirme ve güncelleme
+
+**İlk kez (önerilen: Git ile):** [Git for Windows](https://git-scm.com/download/win)'u kur, sonra komut isteminde:
+
+```bat
+git clone -b claude/discord-bot-yazma-8n14jd https://github.com/sawog/pg3d.git
+cd pg3d\discord-bot
+```
+
+**Ayar değiştirmek** (kanal, mesaj metni, yasaklı kelime): tekrar indirmene gerek yok. `.env` ya da `banned_words.txt`'yi Not Defteri ile düzenle, kaydet, bot penceresini kapatıp `start.bat`'ı yeniden aç.
+
+**Kod güncellemesi geldiğinde:** `pg3d` klasöründe `git pull` yaz, botu yeniden başlat. `.env` ve `bot.db` Git'e dahil olmadığı için ayarların ve uyarı kayıtların silinmez. `requirements.txt` değiştiyse `venv` klasörünü silip `start.bat`'ı aç, paketleri yeniden kurar.
+
+**Git kullanmadan:** GitHub'da `claude/discord-bot-yazma-8n14jd` dalını seç → **Code → Download ZIP**. Güncellemede yeni ZIP'i indir, eski klasördeki `.env`, `banned_words.txt` ve `bot.db` dosyalarını yeni klasöre kopyala.
 
 ## Kurulum
 

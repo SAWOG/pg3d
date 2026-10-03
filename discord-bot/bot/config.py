@@ -69,6 +69,12 @@ class Config:
     spam_seconds: int
     duplicate_limit: int
     caps_min_length: int
+    mention_guard_channel_ids: frozenset[int]
+    mention_guard_user_ids: frozenset[int]
+    mention_guard_names: frozenset[str]
+    mention_guard_message: str
+    mention_guard_cooldown: int
+    mention_guard_delete_after: int
     warn_timeout_threshold: int
     timeout_minutes: int
     warn_expire_days: int
@@ -108,6 +114,14 @@ class Config:
             spam_seconds=max(1, _int("SPAM_SECONDS", 5)),
             duplicate_limit=max(1, _int("DUPLICATE_LIMIT", 3)),
             caps_min_length=max(5, _int("CAPS_MIN_LENGTH", 15)),
+            mention_guard_channel_ids=_ids("MENTION_GUARD_CHANNEL_IDS"),
+            mention_guard_user_ids=_ids("MENTION_GUARD_USER_IDS"),
+            mention_guard_names=_words("MENTION_GUARD_NAMES"),
+            mention_guard_message=os.getenv(
+                "MENTION_GUARD_MESSAGE", "{user} lütfen sawog'u etiketleme, sorunun için ticket aç."
+            ).replace("\\n", "\n"),
+            mention_guard_cooldown=max(0, _int("MENTION_GUARD_COOLDOWN", 60)),
+            mention_guard_delete_after=max(0, _int("MENTION_GUARD_DELETE_AFTER", 0)),
             warn_timeout_threshold=max(1, _int("WARN_TIMEOUT_THRESHOLD", 3)),
             timeout_minutes=max(1, _int("TIMEOUT_MINUTES", 30)),
             warn_expire_days=max(1, _int("WARN_EXPIRE_DAYS", 30)),
