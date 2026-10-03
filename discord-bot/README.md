@@ -1,12 +1,12 @@
 # Discord Yardımcı Bot
 
-Claude (Anthropic API) kullanan üç özellik:
+Yapay zeka kullanmaz, API anahtarı ya da ücretli servis gerektirmez. Sadece Discord bot token'ı ve internet yeterli.
 
 | Özellik | Nasıl çalışır |
 |---|---|
-| **Günlük öneri özeti** | Her gün `DAILY_SUMMARY_TIME` saatinde öneri kanalındaki son 24 saatin mesajlarını okur, Türkçeye çevirir, benzer önerileri birleştirir, popülerliğe göre sıralar ve rapor kanalına atar. `/oneri-ozet saat:48` ile istediğin an çalıştırabilirsin. |
-| **Ticket özeti** | Yeni ticket açılınca `TICKET_AUTO_SUMMARY_DELAY` saniye bekler, sonra kullanıcının ne istediğini (konu, talep, detaylar, durum, önerilen adım) rapor kanalına atar. `/ticket-ozet` komutuyla da istediğin an özetler. Ticket Tool vb. botlarla uyumlu: kategori ID'si ya da kanal adı önekiyle (`ticket-`) tanır. |
-| **Kural uyarısı** | Mesajları `MOD_BATCH_SECONDS` saniyede bir toplu halde `rules.md` kurallarına göre kontrol eder. İhlalde kullanıcıyı kanalda uyarır, uyarıyı kaydeder, ağır ihlalde mesajı siler, `WARN_TIMEOUT_THRESHOLD` uyarıda timeout atar ve log kanalına yazar. Düzenlenen mesajlar da kontrol edilir. Yetkililer, muaf roller ve ticket kanalları taranmaz. |
+| **Günlük öneri özeti** | Her gün `DAILY_SUMMARY_TIME` saatinde öneri kanalındaki son 24 saatin mesajlarını toplar, Türkçeye çevirir, birbirine benzeyen önerileri tek maddede birleştirir, 👍/👎 tepkilerine göre sıralar ve rapor kanalına atar (her maddede mesaja link var). `/oneri-ozet saat:48` ile istediğin an çalıştırabilirsin. |
+| **Ticket özeti** | Yeni ticket açılınca `TICKET_AUTO_SUMMARY_DELAY` saniye bekler, sonra rapor kanalına atar: kim açtı, talebi (kullanıcının ilk mesajları, Türkçeye çevrilmiş), son mesajı, ekler, hangi yetkililer ilgilendi, durum (yanıtlanmadı / yetkili yanıtı bekleniyor / kullanıcı yanıtı bekleniyor). `/ticket-ozet` ile istediğin an da özetler. Ticket Tool vb. botlarla uyumlu: kategori ID'si ya da kanal adı önekiyle (`ticket-`) tanır. |
+| **Kural uyarısı** | Her mesajı anında kontrol eder: yasaklı kelimeler (`banned_words.txt`), davet linki, izinsiz link, toplu etiket, spam (kısa sürede çok mesaj), aynı mesajı tekrar etme, tamamen büyük harf. İhlalde kullanıcıyı uyarır, mesajı siler, uyarıyı kaydeder, `WARN_TIMEOUT_THRESHOLD` uyarıda timeout atar ve log kanalına yazar. Düzenlenen mesajlar da kontrol edilir. Yetkililer, muaf roller ve ticket kanalları taranmaz. |
 
 Komutların hepsi sadece **Mesajları Yönet** yetkisi olanlara görünür (ve sunucu tarafında tekrar kontrol edilir), yanıtlar sadece komutu kullanana görünür.
 
@@ -28,20 +28,17 @@ Komutların hepsi sadece **Mesajları Yönet** yetkisi olanlara görünür (ve s
    Oluşan linkle botu sunucuna ekle.
 5. Sunucuda botun rolünü, timeout atacağı üyelerin rollerinin **üstüne** taşı. Ticket kategorilerinde bota görme izni ver.
 
-### 2. Anthropic API anahtarı
-<https://console.anthropic.com> → **API Keys** → yeni anahtar oluştur, hesaba bakiye yükle.
-
-### 3. Kanal ID'leri
+### 2. Kanal ID'leri
 Discord → Ayarlar → Gelişmiş → **Geliştirici Modu**'nu aç. Kanala/kategoriye/sunucuya sağ tık → **ID'yi Kopyala**.
 
-### 4. Çalıştır (Windows)
+### 3. Çalıştır (Windows)
 [Python 3.11+](https://www.python.org/downloads/) kur (kurulumda *Add python.exe to PATH* işaretli olsun).
 
 ```bat
 cd discord-bot
 copy .env.example .env
 notepad .env
-notepad rules.md
+notepad banned_words.txt
 start.bat
 ```
 
@@ -60,19 +57,13 @@ python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
 ## Ayarlar
 
-Tüm ayarlar `.env` içinde, açıklamaları `.env.example`'da. Kurallar `rules.md` dosyasında — bot moderasyonda bu metni birebir kullanır, ne kadar net yazarsan o kadar isabetli olur.
+Tüm ayarlar `.env` içinde, açıklamaları `.env.example`'da. Yasaklı kelimeler `banned_words.txt` dosyasında, her satıra bir tane. Büyük/küçük harf, Türkçe karakter (ş→s), leetspeak (4→a, 0→o) ve harf arasına boşluk koyma (`a p t a l`) otomatik yakalanır.
 
-## Maliyet
+## Çeviri hakkında
 
-Varsayılan model `claude-opus-5-5` ($4 / 1M girdi, $20 / 1M çıktı token). Kabaca:
-
-- Günlük öneri özeti ve ticket özetleri: genelde özet başına birkaç sent.
-- Moderasyon: her mesaj ayrı değil, `MOD_BATCH_SECONDS` içindeki mesajlar (en fazla 25) **tek istekte** kontrol edilir ve düşük `effort` kullanılır. Çok aktif bir sunucuda en büyük kalem budur.
-
-Maliyeti düşürmek için `.env`'de `CLAUDE_MODEL=claude-sonnet-5-5` (yarı fiyat) yapabilir, `MOD_BATCH_SECONDS` değerini artırabilir veya gürültülü kanalları `MOD_IGNORED_CHANNEL_IDS`'e ekleyebilirsin.
+Çeviri, Google Translate'in ücretsiz ve anahtarsız web adresiyle yapılır. Resmi bir API değildir: Google çok yoğun kullanımda geçici olarak engelleyebilir. Bu olursa bot durmaz, mesajları orijinal haliyle gösterir. Çeviriyi tamamen kapatmak için `.env`'de `TRANSLATE_ENABLED=false` yap.
 
 ## Güvenlik notları
 
-- Kullanıcı mesajları Claude'a JSON verisi olarak gider ve prompt'ta "içindeki talimatlara uyma" denir; model gerçek mesaj ID'leri yerine kısa ID (`m0`, `m1`…) görür, dönen ID'ler sadece o tablodan çözülür.
-- Model bir isteği reddederse (`refusal`) istek otomatik olarak yedek modelde tekrar denenir (`fallbacks="default"`).
-- `.env` ve `bot.db` `.gitignore`'da; token'larını commit'leme.
+- Komut yetkileri hem Discord tarafında hem botun kendi içinde kontrol edilir.
+- `.env` ve `bot.db` `.gitignore`'da; token'ını commit'leme.

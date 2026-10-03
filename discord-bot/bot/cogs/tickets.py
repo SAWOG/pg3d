@@ -8,8 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from ..ai import AIError, TicketSummary
-from ..util import FIELD_LIMIT, clip, collect_history, resolve_text_channel, staff_only
+from ..util import FIELD_LIMIT, clip, collect_history, is_staff, resolve_text_channel, staff_only
 
 if TYPE_CHECKING:
     from ..main import HelperBot
@@ -17,32 +16,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 HISTORY_LIMIT = 500
-STATUS_COLORS: dict[str, discord.Color] = {
-    "açık": discord.Color.orange(),
-    "yanıt bekliyor": discord.Color.gold(),
-    "çözüldü": discord.Color.green(),
-    "belirsiz": discord.Color.light_grey(),
-}
-
-
-def build_embed(channel: discord.TextChannel, summary: TicketSummary, message_count: int) -> discord.Embed:
-    embed = discord.Embed(
-        title=clip(f"🎫 {summary.subject}", 256),
-        description=clip(summary.request, 4096),
-        color=STATUS_COLORS.get(summary.status, discord.Color.light_grey()),
-    )
-    embed.add_field(name="Kanal", value=channel.mention)
-    embed.add_field(name="Durum", value=summary.status)
-    embed.add_field(name="Dil", value=clip(summary.original_language, 64))
-    if summary.key_details:
-        embed.add_field(
-            name="Detaylar",
-            value=clip("\n".join(f"• {d}" for d in summary.key_details), FIELD_LIMIT),
-            inline=False,
-        )
-    embed.add_field(name="Önerilen adım", value=clip(summary.suggested_action, FIELD_LIMIT), inline=False)
-    embed.set_footer(text=f"{message_count} mesaj analiz edildi")
-    return embed
+REQUEST_MESSAGES = 4   # kullanıcının ilk kaç mesajı "talep" sayılsın
 
 
 class Tickets(commands.Cog):
@@ -65,10 +39,49 @@ class Tickets(commands.Cog):
 
     async def summarize(self, channel: discord.TextChannel) -> discord.Embed | None:
         messages = await collect_history(channel, limit=HISTORY_LIMIT)
-        if not messages:
+        user_msgs = [m for m in messages if not is_staff(m.author)]
+        if not user_msgs:
             return None
-        summary = await self.bot.ai.summarize_ticket(channel.name, messages)
-        return build_embed(channel, summary, len(messages))
+
+        opener = user_msgs[0].author
+        opener_msgs = [m for m in user_msgs if m.author.id == opener.id]
+        request_text = "\n".join(m.clean_content for m in opener_msgs[:REQUEST_MESSAGES] if m.clean_content)
+        last_user = opener_msgs[-1]
+        (request_tr, lang), (last_tr, _) = await self.bot.translator.translate_many(
+            [request_text, last_user.clean_content if last_user is not opener_msgs[0] else ""]
+        )
+
+        staff_msgs = [m for m in messages if is_staff(m.author)]
+        last = messages[-1]
+        if not staff_msgs:
+            status, color = "🔴 Henüz yetkili yanıtı yok", discord.Color.red()
+        elif is_staff(last.author):
+            status, color = "🟡 Kullanıcı yanıtı bekleniyor", discord.Color.gold()
+        else:
+            status, color = "🟠 Yetkili yanıtı bekleniyor", discord.Color.orange()
+
+        embed = discord.Embed(
+            title=clip(f"🎫 {channel.name}", 256),
+            description=clip(f"**Talep:**\n{request_tr or '*(sadece dosya gönderildi)*'}", 4096),
+            color=color,
+        )
+        if last_tr:
+            embed.add_field(name="Son kullanıcı mesajı", value=clip(last_tr, FIELD_LIMIT), inline=False)
+        embed.add_field(name="Açan", value=f"{opener.mention}")
+        embed.add_field(name="Durum", value=status)
+        embed.add_field(name="Kanal", value=channel.mention)
+        files = [a.filename for m in user_msgs for a in m.attachments]
+        if files:
+            embed.add_field(name="Ekler", value=clip(", ".join(files), FIELD_LIMIT), inline=False)
+        staff_names = sorted({m.author.display_name for m in staff_msgs})
+        embed.add_field(
+            name="İlgilenen yetkili", value=clip(", ".join(staff_names), FIELD_LIMIT) if staff_names else "—"
+        )
+        if lang not in {"tr", "?"}:
+            embed.add_field(name="Orijinal dil", value=f"`{lang}`")
+        embed.set_footer(text=f"{len(messages)} mesaj · açılış")
+        embed.timestamp = messages[0].created_at
+        return embed
 
     async def _auto_summary(self, channel: discord.TextChannel) -> None:
         await asyncio.sleep(self.bot.config.ticket_auto_summary_delay)
@@ -79,14 +92,10 @@ class Tickets(commands.Cog):
             return
         try:
             embed = await self.summarize(channel)
-        except AIError as e:
-            log.warning("Ticket özeti başarısız (%s): %s", channel.name, e)
-            return
+            if embed is not None:
+                await report.send(content="Yeni ticket", embed=embed)
         except discord.HTTPException as e:
-            log.warning("Ticket geçmişi okunamadı (%s): %s", channel.name, e)
-            return
-        if embed is not None:
-            await report.send(content="Yeni ticket özeti", embed=embed)
+            log.warning("Ticket özeti başarısız (%s): %s", channel.name, e)
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel) -> None:

@@ -6,9 +6,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from .ai import AIClient, AIError
 from .config import Config
 from .storage import WarningStore
+from .translate import Translator
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class HelperBot(commands.Bot):
             allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True),
         )
         self.config = config
-        self.ai = AIClient(config.model, config.rules_text)
+        self.translator = Translator(config.translate_enabled)
         self.store = WarningStore(config.db_path, config.warn_expire_days)
         self.tree.error(self._on_app_command_error)
 
@@ -50,7 +50,7 @@ class HelperBot(commands.Bot):
 
     async def close(self) -> None:
         await super().close()
-        await self.ai.close()
+        await self.translator.close()
         self.store.close()
 
     async def _on_app_command_error(
@@ -59,8 +59,6 @@ class HelperBot(commands.Bot):
         original = getattr(error, "original", error)
         if isinstance(error, (app_commands.MissingPermissions, app_commands.CheckFailure)):
             text = "Bu komutu kullanma yetkin yok."
-        elif isinstance(original, AIError):
-            text = f"AI hatası: {original}"
         elif isinstance(original, discord.Forbidden):
             text = "Botun bu işlem için yetkisi yok (kanal/rol izinlerini kontrol et)."
         else:

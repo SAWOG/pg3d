@@ -31,21 +31,8 @@ def chunk_lines(blocks: list[str], limit: int = EMBED_DESC_LIMIT) -> list[str]:
     return chunks
 
 
-def serialize(message: discord.Message) -> dict[str, object]:
-    """Mesajı Claude'a gönderilecek sade bir sözlüğe çevirir."""
-    data: dict[str, object] = {
-        "author": message.author.display_name,
-        "time": message.created_at.strftime("%Y-%m-%d %H:%M"),
-        "content": message.clean_content,
-    }
-    if isinstance(message.author, discord.Member) and message.author.guild_permissions.manage_messages:
-        data["staff"] = True
-    if message.attachments:
-        data["attachments"] = [a.filename for a in message.attachments]
-    reactions = sum(r.count for r in message.reactions)
-    if reactions:
-        data["reactions"] = reactions
-    return data
+def is_staff(user: discord.abc.User) -> bool:
+    return isinstance(user, discord.Member) and user.guild_permissions.manage_messages
 
 
 async def collect_history(
@@ -53,15 +40,13 @@ async def collect_history(
     *,
     limit: int | None = None,
     after: discord.abc.Snowflake | None = None,
-    include_bots: bool = False,
-) -> list[dict[str, object]]:
-    out: list[dict[str, object]] = []
+) -> list[discord.Message]:
+    """Bot olmayan, içerikli mesajları eskiden yeniye döndürür."""
+    out: list[discord.Message] = []
     async for msg in channel.history(limit=limit, after=after, oldest_first=True):
-        if msg.author.bot and not include_bots:
+        if msg.author.bot or (not msg.content.strip() and not msg.attachments):
             continue
-        if not msg.clean_content and not msg.attachments:
-            continue
-        out.append(serialize(msg))
+        out.append(msg)
     return out
 
 
@@ -81,8 +66,7 @@ def staff_only() -> Callable[[_F], _F]:
     """Varsayılan izin sunucu ayarlarından değiştirilebildiği için yetki sunucu tarafında tekrar doğrulanır."""
 
     async def predicate(interaction: discord.Interaction) -> bool:
-        member = interaction.user
-        if not isinstance(member, discord.Member) or not member.guild_permissions.manage_messages:
+        if not is_staff(interaction.user):
             raise app_commands.MissingPermissions(["manage_messages"])
         return True
 

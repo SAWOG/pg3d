@@ -1,0 +1,6 @@
+# Her satıra bir yasaklı kelime/ifade. '#' ile başlayan satırlar yok sayılır.
+# Büyük/küçük harf, Türkçe karakter (ş->s) ve leetspeak (4->a, 0->o) farkı otomatik yakalanır.
+# Örnek:
+# kufur1
+# kufur2
+# hesap satilik
