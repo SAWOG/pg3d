@@ -7,7 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from .config import Config
-from .storage import WarningStore
+from .storage import DecisionStore
 from .translate import Translator
 
 log = logging.getLogger(__name__)
@@ -24,19 +24,14 @@ class HelperBot(commands.Bot):
         )
         self.config = config
         self.translator = Translator(config.translate_enabled)
-        self.store = WarningStore(config.db_path, config.warn_expire_days)
+        self.store = DecisionStore(config.db_path)
         self.tree.error(self._on_app_command_error)
 
     async def setup_hook(self) -> None:
         from .cogs.mention_guard import MentionGuard
-        from .cogs.moderation import Moderation
         from .cogs.suggestions import Suggestions
-        from .cogs.tickets import Tickets
 
-        tickets = Tickets(self)
-        await self.add_cog(tickets)
         await self.add_cog(Suggestions(self))
-        await self.add_cog(Moderation(self, tickets))
         await self.add_cog(MentionGuard(self))
 
         if self.config.guild_id:
@@ -62,7 +57,7 @@ class HelperBot(commands.Bot):
         if isinstance(error, (app_commands.MissingPermissions, app_commands.CheckFailure)):
             text = "Bu komutu kullanma yetkin yok."
         elif isinstance(original, discord.Forbidden):
-            text = "Botun bu işlem için yetkisi yok (kanal/rol izinlerini kontrol et)."
+            text = "Botun bu işlem için yetkisi yok (kanal izinlerini kontrol et)."
         else:
             log.exception("Komut hatası", exc_info=original)
             text = "Beklenmeyen bir hata oluştu."

@@ -4,64 +4,58 @@ import asyncio
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+
+Status = Literal["accepted", "rejected", "dismissed"]
 
 _SCHEMA = """
-CREATE TABLE IF NOT EXISTS warnings (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id   INTEGER NOT NULL,
-    user_id    INTEGER NOT NULL,
-    rule       TEXT    NOT NULL,
-    reason     TEXT    NOT NULL,
-    created_at INTEGER NOT NULL
+CREATE TABLE IF NOT EXISTS decisions (
+    message_id   INTEGER PRIMARY KEY,
+    guild_id     INTEGER NOT NULL,
+    channel_id   INTEGER NOT NULL,
+    status       TEXT    NOT NULL CHECK (status IN ('accepted', 'rejected', 'dismissed')),
+    reason       TEXT    NOT NULL,
+    moderator_id INTEGER NOT NULL,
+    decided_at   INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_warnings_user ON warnings (guild_id, user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_decisions_channel ON decisions (channel_id);
 """
 
 
-class WarningStore:
-    """sqlite tabanlı uyarı kaydı; bloklayan çağrılar thread'e alınır."""
+class DecisionStore:
+    """Hangi önerinin cevaplandığını tutar; bloklayan sqlite çağrıları thread'e alınır."""
 
-    def __init__(self, path: Path, expire_days: int) -> None:
+    def __init__(self, path: Path) -> None:
         self._conn = sqlite3.connect(path, check_same_thread=False)
         self._conn.executescript(_SCHEMA)
         self._lock = asyncio.Lock()
-        self._expire_s = expire_days * 86400
 
     def close(self) -> None:
         self._conn.close()
 
-    async def _run(self, sql: str, params: tuple[object, ...]) -> list[tuple[Any, ...]]:
-        def work() -> list[tuple[Any, ...]]:
+    async def _run(self, sql: str, params: tuple[object, ...]) -> tuple[list[tuple[Any, ...]], int]:
+        def work() -> tuple[list[tuple[Any, ...]], int]:
             with self._conn:
-                return self._conn.execute(sql, params).fetchall()
+                cur = self._conn.execute(sql, params)
+                return cur.fetchall(), cur.rowcount
 
         async with self._lock:
             return await asyncio.to_thread(work)
 
-    async def add(self, guild_id: int, user_id: int, rule: str, reason: str) -> int:
-        """Uyarı ekler, süresi dolmamış toplam uyarı sayısını döndürür."""
-        now = int(time.time())
-        await self._run(
-            "INSERT INTO warnings (guild_id, user_id, rule, reason, created_at) VALUES (?, ?, ?, ?, ?)",
-            (guild_id, user_id, rule, reason, now),
-        )
-        return await self.count(guild_id, user_id)
+    async def decided_ids(self, channel_id: int) -> set[int]:
+        rows, _ = await self._run("SELECT message_id FROM decisions WHERE channel_id = ?", (channel_id,))
+        return {int(r[0]) for r in rows}
 
-    async def count(self, guild_id: int, user_id: int) -> int:
-        rows = await self._run(
-            "SELECT COUNT(*) FROM warnings WHERE guild_id = ? AND user_id = ? AND created_at >= ?",
-            (guild_id, user_id, int(time.time()) - self._expire_s),
+    async def claim(
+        self, guild_id: int, channel_id: int, message_id: int, status: Status, reason: str, moderator_id: int
+    ) -> bool:
+        """Öneriyi atomik olarak karara bağlar. Başka yetkili önce davrandıysa False döner."""
+        _, inserted = await self._run(
+            "INSERT OR IGNORE INTO decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (message_id, guild_id, channel_id, status, reason, moderator_id, int(time.time())),
         )
-        return int(rows[0][0])
+        return inserted == 1
 
-    async def list(self, guild_id: int, user_id: int, limit: int = 10) -> list[tuple[str, str, int]]:
-        rows = await self._run(
-            "SELECT rule, reason, created_at FROM warnings WHERE guild_id = ? AND user_id = ? "
-            "AND created_at >= ? ORDER BY created_at DESC LIMIT ?",
-            (guild_id, user_id, int(time.time()) - self._expire_s, limit),
-        )
-        return [(str(r[0]), str(r[1]), int(r[2])) for r in rows]
-
-    async def clear(self, guild_id: int, user_id: int) -> None:
-        await self._run("DELETE FROM warnings WHERE guild_id = ? AND user_id = ?", (guild_id, user_id))
+    async def release(self, message_id: int) -> None:
+        """Kanala cevap gönderilemezse kararı geri alır."""
+        await self._run("DELETE FROM decisions WHERE message_id = ?", (message_id,))

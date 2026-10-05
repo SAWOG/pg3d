@@ -1,72 +1,35 @@
 from __future__ import annotations
 
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 import discord
 from discord import app_commands
 
-_F = TypeVar("_F", bound=Callable[..., Any])
+if TYPE_CHECKING:
+    from .main import HelperBot
 
-EMBED_DESC_LIMIT = 4096
-FIELD_LIMIT = 1024
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 def clip(text: str, limit: int) -> str:
+    text = " ".join(text.split())  # satır sonlarını tek satıra indir
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def chunk_lines(blocks: list[str], limit: int = EMBED_DESC_LIMIT) -> list[str]:
-    """Metin bloklarını embed açıklama limitini aşmayacak parçalara böler."""
-    chunks: list[str] = []
-    current = ""
-    for block in blocks:
-        block = clip(block, limit)
-        if current and len(current) + len(block) + 2 > limit:
-            chunks.append(current)
-            current = block
-        else:
-            current = f"{current}\n\n{block}" if current else block
-    if current:
-        chunks.append(current)
-    return chunks
-
-
-def is_staff(user: discord.abc.User) -> bool:
-    return isinstance(user, discord.Member) and user.guild_permissions.manage_messages
-
-
-async def collect_history(
-    channel: discord.abc.Messageable,
-    *,
-    limit: int | None = None,
-    after: discord.abc.Snowflake | None = None,
-) -> list[discord.Message]:
-    """Bot olmayan, içerikli mesajları eskiden yeniye döndürür."""
-    out: list[discord.Message] = []
-    async for msg in channel.history(limit=limit, after=after, oldest_first=True):
-        if msg.author.bot or (not msg.content.strip() and not msg.attachments):
-            continue
-        out.append(msg)
-    return out
-
-
-async def resolve_text_channel(client: discord.Client, channel_id: int) -> discord.TextChannel | None:
-    if not channel_id:
-        return None
-    ch = client.get_channel(channel_id)
-    if ch is None:
-        try:
-            ch = await client.fetch_channel(channel_id)
-        except (discord.NotFound, discord.Forbidden):
-            return None
-    return ch if isinstance(ch, discord.TextChannel) else None
+def is_staff(user: discord.abc.User, staff_role_ids: frozenset[int]) -> bool:
+    if not isinstance(user, discord.Member):
+        return False
+    if user.guild_permissions.manage_messages:
+        return True
+    return any(r.id in staff_role_ids for r in user.roles)
 
 
 def staff_only() -> Callable[[_F], _F]:
-    """Varsayılan izin sunucu ayarlarından değiştirilebildiği için yetki sunucu tarafında tekrar doğrulanır."""
+    """Discord'daki komut izni sunucu ayarından değiştirilebildiği için yetki burada tekrar doğrulanır."""
 
     async def predicate(interaction: discord.Interaction) -> bool:
-        if not is_staff(interaction.user):
+        bot: HelperBot = interaction.client  # type: ignore[assignment]
+        if not is_staff(interaction.user, bot.config.staff_role_ids):
             raise app_commands.MissingPermissions(["manage_messages"])
         return True
 
