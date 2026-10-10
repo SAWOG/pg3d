@@ -22,9 +22,21 @@ Token dışındaki bütün ayarlar Discord içinde slash komutlarıyla yapılır
 | **Server Stat** | Üye/insan/bot/boost sayacı kanalları | `/stats setup` |
 | **YouTube Alert** | Yeni videoda bildirim | `/youtube add` |
 | **Double Counter** | Doğrulama: yeni hesap engeli + basit captcha | `/verify setup` |
-| (önceki istek) | `/summary` öneri paneli, @sawog/@admin etiketine "please open a ticket" cevabı | `.env` |
+| (yeni) | `/summary messages:10` → kanalın son 10 (veya `all`) mesajının İngilizce özeti | — |
+| (önceki istek) | #general-english / #general-br'de @sawog/@admin etiketine "please open a ticket" cevabı | `.env` |
 
 `/help` bütün komutları kategorilere göre listeler.
+
+### `/summary`: sohbet özeti (yapay zekasız)
+`/summary messages:10` (veya `25`, `100`, `all`; en fazla 1000) yazınca, sadece sana görünen bir özet gelir:
+- Kaç mesaj, kaç kişi, kim ne kadar yazmış, hangi saat aralığı.
+- **Konular:** çevrilmiş metinde en sık geçen kelimeler (örn. `map, game, freezes`).
+- **Sorulan sorular:** "?" ile biten cümleler.
+- **Konuşma:** Herkesin mesajı İngilizceye çevrilmiş halde. "ok, lol, kkkk, 👍" gibi boş mesajlar atlanır, aynı kişinin art arda mesajları tek satırda birleşir, botların mesajları gösterilmez.
+- Konuşma tek mesaja sığmazsa en yeni kısım gösterilir, tamamı `.txt` olarak eklenir.
+
+Seçenekler: `channel` (başka bir kanalı özetle), `language` (English / Türkçe / Português / Español). Sadece yetkililer kullanabilir.
+Yapay zeka olmadığı için anlamı okuyup tek paragrafta özetleyemez; mesajları çevirip sadeleştirir.
 
 ### Dahil olmayanlar
 - **Stupid Bot (genai):** yapay zeka gerektiriyor; yapay zekasız bot istediğin için eklenmedi.

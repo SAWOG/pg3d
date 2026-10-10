@@ -15,7 +15,7 @@ from .roles import Roles
 from .server_logs import ServerLogs
 from .setup import Setup
 from .stats import Stats
-from .suggestions import Suggestions
+from .summary import Summary
 from .tempvoice import TempVoice
 from .tickets import Tickets
 from .verification import Verification
@@ -40,6 +40,6 @@ ALL_COGS: tuple[type[commands.Cog], ...] = (
     Stats,
     YouTube,
     Music,
-    Suggestions,
+    Summary,
     MentionGuard,
 )

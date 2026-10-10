@@ -10,7 +10,6 @@ from discord.ext import commands
 from .config import Config
 from .db import Database
 from .settings import Settings
-from .storage import DecisionStore
 from .translate import Translator
 from .util import reply
 from .warns import WarningService
@@ -32,7 +31,6 @@ class HelperBot(commands.Bot):
         self.config = config
         self.db = Database(config.db_path)
         self.settings = Settings(self.db)
-        self.store = DecisionStore(self.db)
         self.translator = Translator(config.translate_enabled)
         self.warns = WarningService(self)
         self._http: aiohttp.ClientSession | None = None
@@ -49,7 +47,6 @@ class HelperBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         await self.settings.load()
-        await self.store.init()
         await self.warns.init()
 
         from .cogs import ALL_COGS

@@ -27,7 +27,7 @@ CATEGORIES: dict[str, str] = {
     "Verification": "🔐 Verification",
     "Stats": "📊 Server stats",
     "YouTube": "📺 YouTube alerts",
-    "Suggestions": "💡 Suggestions",
+    "Summary": "📝 Chat summary",
     "Setup": "⚙️ Setup",
 }
 
