@@ -1,5 +1,10 @@
 @echo off
 cd /d "%~dp0"
+if not exist .env (
+    copy .env.example .env >nul
+    echo .env dosyasi olusturuldu. Acilan Not Defteri'nde DISCORD_TOKEN ve GUILD_ID'yi yaz, kaydet ve kapat.
+    start /wait notepad .env
+)
 if not exist venv (
     echo Ilk kurulum yapiliyor, birkac dakika surebilir...
     python -m venv venv || goto :error
