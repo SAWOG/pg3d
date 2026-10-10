@@ -1,42 +1,53 @@
-# Discord Yardımcı Bot
+# SAWOG Bot: hepsi bir arada
 
-Yapay zeka kullanmaz, API anahtarı gerektirmez. Sadece Discord bot token'ı ve internet yeterli.
+Sunucudaki 22 botun işini tek bot yapar. Yapay zeka kullanmaz, API anahtarı gerekmez.
+Token dışındaki bütün ayarlar Discord içinde slash komutlarıyla yapılır ve `bot.db` dosyasında saklanır.
 
-## 1. `/summary` — öneri paneli
+## Hangi botun yerine ne var?
 
-`/summary kanal:#suggestions` yazınca sadece sana görünen bir panel açılır:
+| Eski bot | Bu botta | Ayar komutu |
+|---|---|---|
+| **Jockie Music ×3, Rythm** | `/play` `/skip` `/stop` `/pause` `/resume` `/queue` `/nowplaying` `/volume` `/loop` `/shuffle` `/remove` | — |
+| **Dyno, Carl, FlaviBot** (moderasyon) | `/ban` `/unban` `/kick` `/timeout` `/untimeout` `/warn` `/warnings` `/clearwarnings` `/purge` `/slowmode` `/lock` `/unlock` | `/setup modlog`, `/setup warns` |
+| **Dyno, Carl** (automod) | Küfür/yasaklı kelime, davet linki, link, spam/flood, toplu etiket, büyük harf | `/automod …` |
+| **Carl, Dyno** (loglar) | Silinen/düzenlenen mesaj, giriş/çıkış, ban, rol/isim değişikliği, ses kanalı | `/setup logs` |
+| **Carl** (hoş geldin, otomatik rol, rol menüsü) | Hoş geldin/güle güle mesajı, otomatik rol, butonla rol alma paneli | `/welcome …`, `/roles panel` |
+| **Tickety, SAWOG TICKETS** | Butonla ticket açma, özel kanal, kapatınca transcript (.txt) | `/ticket setup` |
+| **Invite Tracker, InviteLogger** | Kim kimi davet etti, ayrılanlar, sahte (yeni) hesaplar, tekrar girenler sayılmaz | `/invites channel` |
+| **Arcane** | Mesajla XP, `/rank`, `/leaderboard`, seviye rolleri | `/levels …` |
+| **OwO, Nekotina** (ekonomi) | `/balance` `/daily` `/work` `/give` `/coinflip` `/slots` `/rich` | — |
+| **Nekotina** (anime) | `/hug` `/pat` `/kiss` `/slap` `/cuddle` `/poke` `/bite` `/highfive` `/emote` | — |
+| **FlaviBot** (eğlence) | `/8ball` `/roll` `/choose` `/poll` `/avatar` `/userinfo` `/serverinfo` | — |
+| **VoiceMaster** | "Join to Create" kanalı; `/voice lock/unlock/limit/name/permit/reject/claim` | `/voice setup` |
+| **Server Stat** | Üye/insan/bot/boost sayacı kanalları | `/stats setup` |
+| **YouTube Alert** | Yeni videoda bildirim | `/youtube add` |
+| **Double Counter** | Doğrulama: yeni hesap engeli + basit captcha | `/verify setup` |
+| (önceki istek) | `/summary` öneri paneli, @sawog/@admin etiketine "please open a ticket" cevabı | `.env` |
 
-- Kanalda **henüz kabul ya da reddedilmemiş** bütün öneriler listelenir. Her önerinin yanında Türkçe kısa özeti, 👍/👎 oy sayısı, yazarı, tarihi ve mesaja link vardır.
-- Listeden bir veya birden fazla öneriyi seçip:
-  - **✅ Kabul et** ya da **❌ Reddet** → bir pencere açılır, açıklamayı yazarsın (opsiyonel). Bot öneri kanalında o mesaja cevap atar (yeşil "Suggestion accepted" / kırmızı "Suggestion rejected" + açıklama + kimin karar verdiği) ve mesaja ✅/❌ ekler.
-  - **🙈 Cevapsız kapat** → kanala bir şey yazmadan listeden çıkarır (daha önce elle cevapladığın eski öneriler için).
-- ◀️ ▶️ ile sayfa değiştirilir (sayfa başı 10 öneri), 🔄 ile liste yenilenir.
-- Komut seçenekleri: `min_oy` (örn. sadece en az 5 oy almışlar), `siralama` (en çok oy / en yeni / en eski).
+`/help` bütün komutları kategorilere göre listeler.
 
-Karar verilen öneriler `bot.db` dosyasına kaydedilir, bir daha listelenmez. İki yetkili aynı öneriye aynı anda karar verirse sadece ilki uygulanır.
+### Dahil olmayanlar
+- **Stupid Bot (genai):** yapay zeka gerektiriyor; yapay zekasız bot istediğin için eklenmedi.
+- **Scriptly, sfw.bot, Circle:** sunucunda ne için kullandığını bilmiyorum. Söylersen eklerim.
+- **Double Counter'ın IP ile alt hesap tespiti:** bir web sitesi ve kullanıcıların IP adreslerini toplamayı gerektiriyor. Yerine hesap yaşı kontrolü ve captcha var.
+- **OwO'nun avlanma/hayvan sistemi:** sadece temel ekonomi var.
 
-Öneri sayılmayanlar: botun kendi mesajları, önerilere yazılan yanıtlar (reply) ve sistem mesajları. Öneri botlarının embed'li mesajları da okunur.
-
-## 2. Etiket uyarısı
-
-Sadece **#general-english** ve **#general-br** kanallarında biri **@sawog** ya da **@admin** etiketlerse (gerçek etiket veya düz yazı), bot o mesaja her seferinde şu cevabı verir:
-
-> Please open a ticket if you need something.
-
-Yetkililer ve sawog'un kendisi muaf. Sadece "yanıtla" ile gelen otomatik ping uyarı tetiklemez, mesajın içinde etiket olmalı. Kanallar, isimler ve mesaj `.env` içinden değiştirilebilir.
+### Bilmen gerekenler
+- **Müzik aynı anda tek ses kanalında çalar.** 3 ayrı Jockie botunun olmasının sebebi buydu: Discord'da bir bot, bir sunucuda aynı anda sadece bir ses kanalında olabilir. Aynı anda 2-3 kanalda müzik istiyorsan bu botun 2-3 kopyasını farklı token'larla çalıştırman gerekir.
+- **Müzik YouTube'dan yt-dlp ile çalınır.** Bu YouTube'un kullanım şartlarına aykırıdır (Rythm bu yüzden kapanmıştı). Kendi sunucunda kullanmak senin kararın. YouTube sık değiştiği için `start.bat` her açılışta yt-dlp'yi günceller. Çalmazsa [Deno](https://deno.com) kur (`winget install DenoLand.Deno`); yt-dlp YouTube için buna ihtiyaç duyabiliyor.
+- **Bot, bilgisayarın açık ve `start.bat` penceresi çalışır durumdayken çalışır.** Kapanırsa 5 saniye sonra kendini yeniden başlatır.
+- Eski botları hemen atma. Önce bu botu kurup özellikleri tek tek dene, sonra eskileri çıkar.
 
 ## Kurulum
 
-### 1. Discord botunu oluştur
-1. <https://discord.com/developers/applications> → **New Application**.
-2. **Bot** sekmesi → **Reset Token** → token'ı kopyala (kimseyle paylaşma).
-3. Aynı sayfada **Privileged Gateway Intents** altında **MESSAGE CONTENT INTENT**'i aç.
-4. **OAuth2 → URL Generator**: scope olarak `bot` + `applications.commands`; izinler:
-   *View Channels, Send Messages, Embed Links, Read Message History, Add Reactions*.
-   Oluşan linkle botu sunucuna ekle.
+### 1. Discord'da botu oluştur
+1. <https://discord.com/developers/applications> → **New Application** → **Bot** → **Reset Token** → token'ı kopyala.
+2. Aynı sayfada **Privileged Gateway Intents** altında **SERVER MEMBERS INTENT** ve **MESSAGE CONTENT INTENT**'i aç.
+3. **OAuth2 → URL Generator** → scope: `bot` + `applications.commands` → izin: **Administrator** (en kolayı). İstersen tek tek: Manage Roles, Manage Channels, Kick, Ban, Moderate Members, Manage Messages, Manage Server (davet takibi için), View Audit Log, Send Messages, Embed Links, Attach Files, Read Message History, Add Reactions, Connect, Speak, Move Members.
+4. Linkle botu sunucuna ekle. **Sunucu Ayarları → Roller**'de botun rolünü en üste taşı (rol verebilmesi ve ceza verebilmesi için).
 
-### 2. İndir
-[Python 3.11+](https://www.python.org/downloads/) (kurulumda *Add python.exe to PATH* işaretli olsun) ve [Git for Windows](https://git-scm.com/download/win) kur. Komut isteminde:
+### 2. İndir ve çalıştır (Windows)
+[Python 3.11+](https://www.python.org/downloads/) (kurulumda *Add python.exe to PATH* işaretli) ve [Git](https://git-scm.com/download/win) kur:
 
 ```bat
 git clone -b claude/discord-bot-yazma-8n14jd https://github.com/sawog/pg3d.git
@@ -45,23 +56,29 @@ copy .env.example .env
 notepad .env
 ```
 
-`.env` içine en az `DISCORD_TOKEN` ve `GUILD_ID` yaz. Sunucu/kanal ID'si için: Discord → Ayarlar → Gelişmiş → **Geliştirici Modu** aç, sağ tık → **ID'yi Kopyala**.
+`.env` içine `DISCORD_TOKEN` ve `GUILD_ID` yaz. ID almak için: Discord → Ayarlar → Gelişmiş → **Geliştirici Modu** aç, sunucuya sağ tık → **ID'yi Kopyala**.
+Sonra `start.bat`'a çift tıkla. FFmpeg dahil gereken her şey otomatik kurulur.
 
-### 3. Çalıştır
-`start.bat`'a çift tıkla. İlk açılışta paketleri kendisi kurar. Pencere açık kaldığı sürece bot çalışır.
-
-Linux/macOS:
-
-```bash
-python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
-./venv/bin/python -m bot
+### 3. Discord'da ilk ayarlar (önerilen sıra)
+```
+/setup logs channel:#logs
+/setup modlog channel:#mod-logs
+/ticket setup channel:#support category:Tickets staff_role:@Staff log_channel:#ticket-logs
+/welcome set channel:#welcome
+/welcome autorole add role:@Member
+/automod enable on:True
+/automod word add words:kelime1, kelime2
+/invites channel channel:#invite-logs
+/levels channel channel:#level-up
+/voice setup
+/stats setup
+/youtube add youtube_channel:@kanaladi channel:#videos
+/verify setup channel:#verify role:@Verified
+/roles panel channel:#roles title:Roller role1:@EN role2:@BR
+/setup show
 ```
 
 ## Sonradan değiştirmek
-
-- **Ayar** (kanal, mesaj metni, isimler): `.env`'yi Not Defteri ile düzenle → bot penceresini kapat → `start.bat`'ı tekrar aç. Yeniden indirmen gerekmez.
-- **Kod güncellemesi:** `pg3d` klasöründe `git pull` → botu yeniden başlat. `.env` ve `bot.db` silinmez. `requirements.txt` değiştiyse `venv` klasörünü silip `start.bat`'ı aç.
-
-## Çeviri hakkında
-
-Çeviri, Google Translate'in ücretsiz ve anahtarsız web adresiyle yapılır; resmi bir API değildir. Çeviri başarısız olursa bot durmaz, öneriyi orijinal haliyle gösterir. Kapatmak için `TRANSLATE_ENABLED=false`.
+- **Ayarlar:** Discord'daki komutlarla. Botu yeniden başlatmaya gerek yok.
+- **`.env`:** Not Defteri ile düzenle, bot penceresini kapatıp `start.bat`'ı aç.
+- **Güncelleme:** `pg3d` klasöründe `git pull` yaz, botu yeniden başlat. `.env` ve `bot.db` (ayarlar, seviyeler, paralar, uyarılar) silinmez.

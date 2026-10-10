@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-import sqlite3
 import time
-from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
+
+from .db import Database
 
 Status = Literal["accepted", "rejected", "dismissed"]
 
@@ -23,34 +22,23 @@ CREATE INDEX IF NOT EXISTS idx_decisions_channel ON decisions (channel_id);
 
 
 class DecisionStore:
-    """Hangi önerinin cevaplandığını tutar; bloklayan sqlite çağrıları thread'e alınır."""
+    """Hangi önerinin cevaplandığını tutar."""
 
-    def __init__(self, path: Path) -> None:
-        self._conn = sqlite3.connect(path, check_same_thread=False)
-        self._conn.executescript(_SCHEMA)
-        self._lock = asyncio.Lock()
+    def __init__(self, db: Database) -> None:
+        self._db = db
 
-    def close(self) -> None:
-        self._conn.close()
-
-    async def _run(self, sql: str, params: tuple[object, ...]) -> tuple[list[tuple[Any, ...]], int]:
-        def work() -> tuple[list[tuple[Any, ...]], int]:
-            with self._conn:
-                cur = self._conn.execute(sql, params)
-                return cur.fetchall(), cur.rowcount
-
-        async with self._lock:
-            return await asyncio.to_thread(work)
+    async def init(self) -> None:
+        await self._db.script(_SCHEMA)
 
     async def decided_ids(self, channel_id: int) -> set[int]:
-        rows, _ = await self._run("SELECT message_id FROM decisions WHERE channel_id = ?", (channel_id,))
+        rows = await self._db.fetchall("SELECT message_id FROM decisions WHERE channel_id = ?", (channel_id,))
         return {int(r[0]) for r in rows}
 
     async def claim(
         self, guild_id: int, channel_id: int, message_id: int, status: Status, reason: str, moderator_id: int
     ) -> bool:
         """Öneriyi atomik olarak karara bağlar. Başka yetkili önce davrandıysa False döner."""
-        _, inserted = await self._run(
+        inserted = await self._db.execute(
             "INSERT OR IGNORE INTO decisions VALUES (?, ?, ?, ?, ?, ?, ?)",
             (message_id, guild_id, channel_id, status, reason, moderator_id, int(time.time())),
         )
@@ -58,4 +46,4 @@ class DecisionStore:
 
     async def release(self, message_id: int) -> None:
         """Kanala cevap gönderilemezse kararı geri alır."""
-        await self._run("DELETE FROM decisions WHERE message_id = ?", (message_id,))
+        await self._db.execute("DELETE FROM decisions WHERE message_id = ?", (message_id,))
