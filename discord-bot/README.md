@@ -50,6 +50,22 @@ Yapay zeka olmadığı için anlamı okuyup tek paragrafta özetleyemez; mesajla
 - **Bot, bilgisayarın açık ve `start.bat` penceresi çalışır durumdayken çalışır.** Kapanırsa 5 saniye sonra kendini yeniden başlatır.
 - Eski botları hemen atma. Önce bu botu kurup özellikleri tek tek dene, sonra eskileri çıkar.
 
+## Terminalden özet (`ozet.bat`)
+Discord'a girmeden, bilgisayarının terminalinden kanal özeti alabilirsin. Botun açık olması gerekmez; sadece `.env`'deki bot token'ıyla mesajları okur.
+
+`ozet.bat`'a çift tıkla, sonra yaz:
+```
+özet> general-english 10        son 10 mesajın İngilizce özeti
+özet> general-br all tr         son 1000 mesajın Türkçe özeti
+özet> general-english           sayı yazmazsan son 50 mesaj
+özet> kanallar                  kanal listesi
+özet> çık
+```
+Kanal adının bir kısmını yazman da yeter (`english 10`). 60 satırdan uzun özetler `ozetler/` klasörüne `.txt` olarak da kaydedilir.
+Komut satırından tek seferde: `ozet.bat general-english 10`.
+
+> Kendi Discord hesabınla (bot olmadan) mesaj okumak Discord kurallarına aykırıdır ve hesabın kapatılabilir; bu araç bu yüzden botun token'ını kullanır.
+
 ## Kurulum
 
 ### 1. Discord'da botu oluştur

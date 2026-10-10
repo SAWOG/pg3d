@@ -7,23 +7,15 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from ..chat_digest import Digest, RawMessage, finalize, summarize
+from ..chat_digest import Digest
+from ..summary_service import ALL_LIMIT, LANGUAGES, build_digest, parse_count
 from ..util import clip, embed, reply, staff_only
 
 if TYPE_CHECKING:
     from ..main import HelperBot
 
-ALL_LIMIT = 1000
 LINE_CHARS = 300
 EMBED_BUDGET = 3900
-LANGUAGES: dict[str, str] = {"en": "English", "tr": "Türkçe", "pt": "Português", "es": "Español"}
-
-
-def parse_count(text: str) -> int | None:
-    text = text.strip().lower()
-    if text in ("all", "hepsi", "tümü", "tumu"):
-        return ALL_LIMIT
-    return min(int(text), ALL_LIMIT) if text.isdigit() and int(text) > 0 else None
 
 
 def _line(author: str, ts: int, text: str) -> str:
@@ -111,20 +103,10 @@ class Summary(commands.Cog):
         lang = language.value if language and language.value in LANGUAGES else "en"
 
         await interaction.response.defer(ephemeral=True, thinking=True)
-        raw: list[RawMessage] = []
-        async for m in target.history(limit=count):
-            if m.author.bot or m.type not in (discord.MessageType.default, discord.MessageType.reply):
-                continue
-            raw.append(RawMessage(m.author.id, m.author.display_name, m.clean_content, m.created_at, len(m.attachments)))
-        raw.reverse()  # history en yeniden eskiye döner; özet eskiden yeniye okunur
-        if not raw:
+        digest = await build_digest(target, count, self.bot.translator, lang)
+        if digest is None:
             return await reply(interaction, "No messages to summarize.")
-
-        digest = summarize(raw)
-        translations = await self.bot.translator.translate_batch([b.text for b in digest.blocks], lang)
-        for block, text in zip(digest.blocks, translations):
-            block.english = text
-        embeds, file = render(finalize(digest), target.name, lang)
+        embeds, file = render(digest, target.name, lang)
         if file is not None:
             await interaction.followup.send(embeds=embeds, file=file, ephemeral=True)
         else:
