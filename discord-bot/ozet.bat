@@ -5,9 +5,12 @@ if not exist .env (
     echo .env dosyasi olusturuldu. Acilan Not Defteri'nde DISCORD_TOKEN ve GUILD_ID'yi yaz, kaydet ve kapat.
     start /wait notepad .env
 )
+rem Python komutunu bul: once "py" (python.org kurulumu), yoksa "python"
+set "PY=python"
+where py >nul 2>nul && set "PY=py -3"
 if not exist venv (
     echo Ilk kurulum yapiliyor, birkac dakika surebilir...
-    python -m venv venv || goto :error
+    %PY% -m venv venv || goto :error
     venv\Scripts\python -m pip install -q -r requirements.txt || goto :error
 )
 chcp 65001 >nul
@@ -15,5 +18,5 @@ venv\Scripts\python -m bot.cli %*
 exit /b
 
 :error
-echo Kurulum basarisiz. Python 3.11+ kurulu ve PATH'te mi?
+echo Kurulum basarisiz. Python 3.11 veya daha yenisi kurulu mu? (kurarken "Add python.exe to PATH" isaretli olmali)
 pause
